@@ -3,19 +3,50 @@
     "description": "启用参数修复",
     "type": "bool",
     "default": true,
-    "hint": "关闭后插件不会修改任何工具参数"
+    "hint": "关闭后将不再介入任何工具调用，问题会原样复现"
   },
   "log_level": {
     "description": "日志级别",
     "type": "string",
     "default": "info",
-    "options": ["silent", "info", "debug"],
-    "hint": "silent=只记失败，info=记录修复动作，debug=额外打印解析细节"
+    "options": [
+      "silent",
+      "info",
+      "debug"
+    ],
+    "labels": [
+      "静默（仅记录失败）",
+      "常规（记录修复动作）",
+      "调试（打印解析细节）"
+    ],
+    "subtitles": [
+      "只在解析失败时输出 warning，日志最干净",
+      "每次成功修复输出一行 info，便于确认生效",
+      "额外打印原始 raw 内容与解析结果，排障用"
+    ],
+    "hint": "控制日志输出量。长期运行建议用「静默」或「常规」。"
   },
   "warn_on_name_mismatch": {
     "description": "工具名不一致时告警",
     "type": "bool",
     "default": true,
-    "hint": "模型声明的工具名与框架实际调用的工具名不同时输出警告"
+    "hint": "模型在 raw 里声明的工具名与框架实际调用的工具名不同时输出 warning。参数仍会照常写回，不影响执行。"
+  },
+  "sensitive_tools": {
+    "description": "敏感工具名单",
+    "type": "list",
+    "default": [
+      "astrbot_execute_shell",
+      "astrbot_execute_python",
+      "astrbot_execute_sandbox"
+    ],
+    "hint": "这些工具的参数被修复时，日志只记录参数数量，不打印参数名，避免命令行内容进入日志。清空列表表示不屏蔽任何工具。"
+  },
+  "dry_run": {
+    "description": "仅演练不修改",
+    "type": "bool",
+    "default": false,
+    "obvious_hint": true,
+    "hint": "开启后插件只解析并输出日志，不真正改写 tool_args。用于排查「修了但也还是坏」的情况。"
   }
 }

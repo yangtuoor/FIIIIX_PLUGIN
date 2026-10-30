@@ -1,0 +1,21 @@
+{
+  "enabled": {
+    "description": "启用参数修复",
+    "type": "bool",
+    "default": true,
+    "hint": "关闭后插件不会修改任何工具参数"
+  },
+  "log_level": {
+    "description": "日志级别",
+    "type": "string",
+    "default": "info",
+    "options": ["silent", "info", "debug"],
+    "hint": "silent=只记失败，info=记录修复动作，debug=额外打印解析细节"
+  },
+  "warn_on_name_mismatch": {
+    "description": "工具名不一致时告警",
+    "type": "bool",
+    "default": true,
+    "hint": "模型声明的工具名与框架实际调用的工具名不同时输出警告"
+  }
+}

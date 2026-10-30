@@ -2,12 +2,12 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![AstrBot](https://img.shields.io/badge/AstrBot-%3E%3D4.16%2C%3C5-blue)](https://github.com/AstrBotDevs/AstrBot)
-[![Version](https://img.shields.io/badge/version-1.0.0-brightgreen)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.1.0-brightgreen)](CHANGELOG.md)
 
 修复模型以 **DSML / `<tool_call>` / 裸 JSON** 形式输出工具调用参数，导致 AstrBot 报
 `Tool handler parameter mismatch, please check the handler definition.` 的问题。
 
-安装即用，无需任何配置。
+安装即用，默认无需任何配置。
 
 ---
 
@@ -83,6 +83,12 @@ systemctl restart astrbot
 
 Windows 部署则解压到 `AstrBot/data/plugins/` 下，重启 AstrBot。
 
+启动日志出现下面这行即代表生效：
+
+```
+[tool_arg_fix] 已加载；启用=True 日志级别=info 演练模式=False
+```
+
 ---
 
 ## 支持的格式
@@ -110,11 +116,26 @@ Windows 部署则解压到 `AstrBot/data/plugins/` 下，重启 AstrBot。
 
 ## 配置
 
+所有配置项都会在管理面板的可视化配置页中呈现。
+
 | 键 | 类型 | 默认 | 说明 |
 |---|---|---|---|
-| `enabled` | bool | `true` | 启用参数修复 |
-| `log_level` | string | `info` | `silent` / `info` / `debug` |
-| `warn_on_name_mismatch` | bool | `true` | 模型声明的工具名与框架实际调用的工具名不一致时输出告警 |
+| `enabled` | bool | `true` | 总开关。关闭后不介入任何工具调用 |
+| `log_level` | string | `info` | `silent` / `info` / `debug`，带中文副标题说明 |
+| `warn_on_name_mismatch` | bool | `true` | 模型声明的工具名与实际调用不一致时告警 |
+| `sensitive_tools` | list | `["astrbot_execute_shell", "astrbot_execute_python", "astrbot_execute_sandbox"]` | 日志中隐藏这些工具的参数名，只报数量。清空列表表示不屏蔽 |
+| `dry_run` | bool | `false` | 演练模式：只解析并打日志，不改写参数。用于排查问题 |
+
+### 为什么有 sensitive_tools
+
+如果模型调用的是 `astrbot_execute_shell`，参数里是真实命令。默认行为下
+插件会打印 `参数=['command']`——虽然只是键名，但这仍是不必要的暴露。
+
+列入 `sensitive_tools` 后，日志变成：
+
+```
+[tool_arg_fix] 已修复 工具=astrbot_execute_shell 参数=<2 个参数，已隐藏>
+```
 
 ---
 
@@ -122,18 +143,20 @@ Windows 部署则解压到 `AstrBot/data/plugins/` 下，重启 AstrBot。
 
 | 指令 | 说明 |
 |---|---|
-| `/paramfix` | 查看修复统计（已修复次数、解析失败次数） |
+| `/paramfix` | 查看修复统计（已修复 / 解析失败 / 跳过） |
 
 ---
 
 ## 日志关键字
 
 ```
-[tool_arg_fix] 已加载；启用=True 日志级别=info
+[tool_arg_fix] 已加载；启用=True 日志级别=info 演练模式=False
 [tool_arg_fix] 已修复 工具=web_search 参数=['query']
+[tool_arg_fix] 已修复 工具=astrbot_execute_shell 参数=<2 个参数，已隐藏>
 [tool_arg_fix] 解析失败，工具=web_search raw=<...>
-[tool_arg_fix] 工具名不一致：模型声明=xxx 实际=yyy
-[tool_arg_fix] 已卸载；本次共修复 N 次，失败 M 次
+[tool_arg_fix] 工具名不一致：模型声明=xxx 实际=yyy（参数照常写回）
+[tool_arg_fix] 演练模式，未修改。工具=x 将写入的参数=['a']
+[tool_arg_fix] 已卸载；本次共修复 N 次，失败 M 次，跳过 K 次
 ```
 
 ---
@@ -163,6 +186,22 @@ name, args = parse_tool_raw('<tool_call name="web_search">{"query": "天气"}</t
 
 ---
 
+## 开发说明
+
+本插件遵循 AstrBot 官方插件开发规范：
+
+- **不使用 `@register` 装饰器**。该装饰器已在 AstrBot 3.5.19 之后废弃，未来会移除。
+  插件元数据全部由 `metadata.yaml` 提供，AstrBot 自动识别继承 `Star` 的类。
+- **配置通过 `AstrBotConfig` 注入**。类签名是 `__init__(self, context: Context, config: AstrBotConfig)`，
+  AstrBot 会依据 `_conf_schema.json` 自动生成 `data/config/<plugin_name>_config.json` 并传入。
+- **`_conf_schema.json` 使用完整的 schema 字段**：`type`、`description`、`hint`、`default`、
+  `options` + `labels` + `subtitles`（下拉框中文说明）、`obvious_hint`。
+- **所有配置读取都有类型兜底**，即使用户手改坏了配置文件也不会崩溃。
+
+参考文档：<https://docs.astrbot.app/dev/star/guides/plugin-config.html>
+
+---
+
 ## 常见问题
 
 **Q：装了之后原来的工具还能正常用吗？**
@@ -174,6 +213,16 @@ name, args = parse_tool_raw('<tool_call name="web_search">{"query": "天气"}</t
 
 不会。`parse_tool_raw` 只在文本含 DSML 标记、`<tool_call>` 标签，或本身是合法 JSON
 对象时才返回结果。普通聊天文本返回 `(None, None)`。
+
+**Q：怎么确认它真的在工作？**
+
+让它调用一次会出问题的工具，然后看日志有没有 `[tool_arg_fix] 已修复 工具=...`。
+或者发送 `/paramfix` 看统计数字。
+
+**Q：修了但还是报参数不匹配怎么办？**
+
+打开 `dry_run` 演练模式，看日志里的「将写入的参数」是否正确。如果正确但依然报错，
+说明问题不在 `raw` 包装这一层。
 
 **Q：和 `astrbot_plugin_search_hub` 里的同名功能冲突吗？**
 

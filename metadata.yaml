@@ -1,9 +1,12 @@
 name: astrbot_plugin_tool_arg_fix
 display_name: 工具参数修复器
-description: 修复模型以 DSML、<tool_call> 或 raw 包装形式输出工具调用参数，导致的「Tool handler parameter mismatch」错误。
+desc: 修复模型以 DSML、<tool_call> 或 raw 包装形式输出工具调用参数，导致的 Tool handler parameter mismatch 错误。
 short_desc: 自动纠正 DSML / tool_call 包裹格式的工具参数
-help: 安装后无需任何配置，自动生效。当模型输出的工具参数被包成 {"raw": "..."} 时，本插件会解析出真实工具名与参数并重新写回。
-version: 1.0.0
+help: |
+  安装后默认自动生效。
+  当模型输出的工具参数被包成 {"raw": "..."} 时，本插件会解析出真实工具名与参数并重新写回。
+  可使用 /paramfix 查看统计；可在插件配置中调整日志级别、启用演练模式、设置敏感工具名单。
+version: 1.1.0
 author: yangtuoor
 repo: https://github.com/yangtuoor/FIIIIX_PLUGIN
 support_platforms:
@@ -11,4 +14,10 @@ support_platforms:
   - telegram
   - discord
   - webchat
+  - wecom
+  - lark
 astrbot_version: ">=4.16,<5"
+tags:
+  - 工具
+  - 修复
+  - agent
